@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'features/recording/recording_service.dart';
+import 'features/transcription/transcription_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
   runApp(const ZenlyApp());
 }
 
@@ -27,23 +31,37 @@ class RecordTestScreen extends StatefulWidget {
 }
 
 class _RecordTestScreenState extends State<RecordTestScreen> {
-  final RecordingService _service = RecordingService();
+  final RecordingService _recordingService = RecordingService();
+  final TranscriptionService _transcriptionService = TranscriptionService();
+
   bool _isRecording = false;
+  bool _isProcessing = false;
+  String? _transcript;
   String? _savedPath;
 
   Future<void> _toggleRecording() async {
     if (_isRecording) {
-      final path = await _service.stopRecording();
+      final path = await _recordingService.stopRecording();
       setState(() {
         _isRecording = false;
         _savedPath = path;
+        _isProcessing = true;
+        _transcript = null;
       });
+
+      if (path != null) {
+        final result = await _transcriptionService.transcribe(path);
+        setState(() {
+          _isProcessing = false;
+          _transcript = result;
+        });
+      }
     } else {
-      final path = await _service.startRecording();
+      final path = await _recordingService.startRecording();
       if (path != null) {
         setState(() {
           _isRecording = true;
-          _savedPath = null;
+          _transcript = null;
         });
       }
     }
@@ -51,7 +69,7 @@ class _RecordTestScreenState extends State<RecordTestScreen> {
 
   @override
   void dispose() {
-    _service.dispose();
+    _recordingService.dispose();
     super.dispose();
   }
 
@@ -59,25 +77,36 @@ class _RecordTestScreenState extends State<RecordTestScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              _isRecording ? 'Recording...' : 'Tap to Record',
+              _isRecording
+                  ? 'Recording...'
+                  : _isProcessing
+                  ? 'Transcribing...'
+                  : 'Tap to Record',
               style: const TextStyle(color: Colors.white70, fontSize: 18),
             ),
             const SizedBox(height: 32),
             GestureDetector(
-              onTap: _toggleRecording,
+              onTap: _isProcessing ? null : _toggleRecording,
               child: Container(
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _isRecording ? Colors.red : const Color(0xFF534AB7),
+                  color: _isProcessing
+                      ? Colors.grey
+                      : _isRecording
+                      ? Colors.red
+                      : const Color(0xFF534AB7),
                 ),
-                child: Icon(
+                child: _isProcessing
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Icon(
                   _isRecording ? Icons.stop : Icons.mic,
                   color: Colors.white,
                   size: 36,
@@ -85,15 +114,19 @@ class _RecordTestScreenState extends State<RecordTestScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            if (_savedPath != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+            if (_transcript != null)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1a1a1a),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Text(
-                  'Saved to:\n$_savedPath',
-                  textAlign: TextAlign.center,
+                  _transcript!,
                   style: const TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
+                    color: Colors.white,
+                    fontSize: 16,
+                    height: 1.6,
                   ),
                 ),
               ),
