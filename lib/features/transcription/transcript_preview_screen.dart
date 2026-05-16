@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../shared/models/transcript_model.dart';
 import '../recording/recording_screen.dart';
 
@@ -42,13 +43,18 @@ class TranscriptPreviewScreen extends StatelessWidget {
   }
 
   void _shareTranscript(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sharing is not available yet'),
-        backgroundColor: Color(0xFF1A1A1A),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    final text = transcript.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nothing to share'),
+          backgroundColor: Color(0xFF1A1A1A),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    Share.share(text, subject: 'Transcript');
   }
 
   @override
