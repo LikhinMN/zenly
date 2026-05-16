@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../transcription/transcription_service.dart';
+import 'package:uuid/uuid.dart';
+import '../../main.dart';
+import '../../shared/models/transcript_model.dart';
 
 class TranscriptScreen extends StatefulWidget {
   final String audioPath;
@@ -20,6 +23,8 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
   final TranscriptionService _service = TranscriptionService();
   String? _transcript;
   bool _isLoading = true;
+  bool _isSaving = false;
+  bool _hasSaved = false;
 
   @override
   void initState() {
@@ -40,6 +45,48 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
     final s = widget.duration % 60;
     if (m > 0) return '${m}m ${s}s';
     return '${s}s';
+  }
+
+  bool get _canSave {
+    final text = _transcript?.trim();
+    return !_isLoading && !_isSaving && !_hasSaved && text != null && text.isNotEmpty;
+  }
+
+  Future<void> _saveTranscript() async {
+    if (!_canSave) {
+      if (_hasSaved) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Transcript already saved'),
+            backgroundColor: Color(0xFF534AB7),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    final text = _transcript!.trim();
+    final model = TranscriptModel(
+      id: const Uuid().v4(),
+      text: text,
+      createdAt: DateTime.now(),
+      durationSeconds: widget.duration,
+    );
+    await storageService.saveTranscript(model);
+    if (!mounted) return;
+    setState(() {
+      _isSaving = false;
+      _hasSaved = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Transcript saved'),
+        backgroundColor: Color(0xFF534AB7),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   void _copyToClipboard() {
@@ -129,7 +176,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                       icon: Icons.save_alt,
                       label: 'save',
                       isPrimary: true,
-                      onTap: () {},
+                      onTap: _saveTranscript,
                     ),
                   ),
                   const SizedBox(width: 8),

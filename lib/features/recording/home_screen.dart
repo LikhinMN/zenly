@@ -1,19 +1,64 @@
 import 'package:flutter/material.dart';
+import '../../main.dart';
+import '../../shared/models/transcript_model.dart';
 import 'recording_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  final List<Map<String, String>> _recentTranscripts = const [
-    {
-      'title': 'Meeting notes — design review',
-      'time': 'Today, 2:14 PM · 1m 32s',
-    },
-    {
-      'title': 'Research ideas for sprint 3',
-      'time': 'Yesterday · 45s',
-    },
-  ];
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
+  List<TranscriptModel> _transcripts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTranscripts();
+  }
+
+  void _loadTranscripts() {
+    setState(() {
+      _transcripts = storageService.getAllTranscripts();
+    });
+  }
+
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inDays == 0) return 'Today, ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    if (diff.inDays == 1) return 'Yesterday';
+    return '${diff.inDays} days ago';
+  }
+
+  String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    if (m > 0) return '${m}m ${s}s';
+    return '${s}s';
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    _loadTranscripts();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +83,7 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 4),
               const Text(
                 'tap to record',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF555555),
-                ),
+                style: TextStyle(fontSize: 13, color: Color(0xFF555555)),
               ),
               const SizedBox(height: 40),
 
@@ -64,13 +106,14 @@ class HomeScreen extends StatelessWidget {
 
               // Record button
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const RecordingScreen(),
                     ),
                   );
+                  _loadTranscripts();
                 },
                 child: Container(
                   width: 72,
@@ -79,11 +122,7 @@ class HomeScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: Color(0xFF534AB7),
                   ),
-                  child: const Icon(
-                    Icons.mic,
-                    color: Colors.white,
-                    size: 32,
-                  ),
+                  child: const Icon(Icons.mic, color: Colors.white, size: 32),
                 ),
               ),
               const SizedBox(height: 12),
@@ -93,16 +132,26 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-              // Divider
               const Divider(color: Color(0xFF222222)),
               const SizedBox(height: 12),
 
-              // Recent transcripts
+              // Transcripts list
               Expanded(
-                child: ListView.builder(
-                  itemCount: _recentTranscripts.length,
+                child: _transcripts.isEmpty
+                    ? const Center(
+                  child: Text(
+                    'No transcripts yet.\nRecord something!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF444444),
+                      fontSize: 14,
+                    ),
+                  ),
+                )
+                    : ListView.builder(
+                  itemCount: _transcripts.length,
                   itemBuilder: (context, index) {
-                    final item = _recentTranscripts[index];
+                    final t = _transcripts[index];
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.symmetric(
@@ -115,16 +164,17 @@ class HomeScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item['title']!,
+                            t.text,
                             style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFFCCCCCC),
                             ),
                             overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            item['time']!,
+                            '${_formatTime(t.createdAt)} · ${_formatDuration(t.durationSeconds)}',
                             style: const TextStyle(
                               fontSize: 11,
                               color: Color(0xFF444444),
