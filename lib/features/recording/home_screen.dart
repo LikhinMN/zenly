@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../shared/models/transcript_model.dart';
+import '../transcription/transcript_preview_screen.dart';
 import 'recording_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -186,38 +187,50 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                                 size: 20,
                               ),
                             ),
-                            child: Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1A1A1A),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    t.text,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFFCCCCCC),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    '${_formatTime(t.createdAt)} · ${_formatDuration(t.durationSeconds)}',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF444444),
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => TranscriptPreviewScreen(
+                                      transcript: t,
                                     ),
                                   ),
-                                ],
+                                );
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1A1A1A),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      t.text,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFFCCCCCC),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '${_formatTime(t.createdAt)} · ${_formatDuration(t.durationSeconds)}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF444444),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
