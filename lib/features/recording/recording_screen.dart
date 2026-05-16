@@ -3,9 +3,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../shared/services/recording_service.dart';
 import '../transcription/transcript_screen.dart';
+import '../../shared/models/recording_mode.dart';
 
 class RecordingScreen extends StatefulWidget {
-  const RecordingScreen({super.key});
+  final RecordingMode mode;
+  const RecordingScreen({super.key, required this.mode});
 
   @override
   State<RecordingScreen> createState() => _RecordingScreenState();
@@ -53,7 +55,11 @@ class _RecordingScreenState extends State<RecordingScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => TranscriptScreen(audioPath: path, duration: _seconds),
+          builder: (_) => TranscriptScreen(
+            audioPath: path,
+            duration: _seconds,
+            mode: widget.mode,
+          ),
         ),
       );
     }

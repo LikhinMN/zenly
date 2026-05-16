@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../shared/models/transcript_model.dart';
-import '../recording/recording_screen.dart';
+import '../recording/mode_selector_screen.dart';
 
 class TranscriptPreviewScreen extends StatelessWidget {
   final TranscriptModel transcript;
@@ -119,7 +119,7 @@ class TranscriptPreviewScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const RecordingScreen(),
+                      builder: (_) => const ModeSelectorScreen(),
                     ),
                   );
                 },

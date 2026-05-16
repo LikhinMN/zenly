@@ -5,15 +5,18 @@ import 'package:uuid/uuid.dart';
 import '../../main.dart';
 import '../../shared/models/transcript_model.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../shared/models/recording_mode.dart';
 
 class TranscriptScreen extends StatefulWidget {
   final String audioPath;
   final int duration;
+  final RecordingMode mode;
 
   const TranscriptScreen({
     super.key,
     required this.audioPath,
     required this.duration,
+    required this.mode,
   });
 
   @override
@@ -128,7 +131,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${_formattedDuration} · just now',
+                '${widget.mode.label} · ${_formattedDuration} · just now',
                 style: const TextStyle(fontSize: 13, color: Color(0xFF555555)),
               ),
               const SizedBox(height: 16),

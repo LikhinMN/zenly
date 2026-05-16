@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../shared/models/transcript_model.dart';
 import '../transcription/transcript_preview_screen.dart';
-import 'recording_screen.dart';
+import 'mode_selector_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -113,7 +113,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 onTap: () async {
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const RecordingScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const ModeSelectorScreen(),
+                    ),
                   );
                   _loadTranscripts();
                 },
