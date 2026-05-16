@@ -6,6 +6,7 @@ import '../../main.dart';
 import '../../shared/models/transcript_model.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../shared/models/recording_mode.dart';
+import '../../shared/services/gemini_service.dart';
 
 class TranscriptScreen extends StatefulWidget {
   final String audioPath;
@@ -25,10 +26,13 @@ class TranscriptScreen extends StatefulWidget {
 
 class _TranscriptScreenState extends State<TranscriptScreen> {
   final TranscriptionService _service = TranscriptionService();
+  final GeminiService _geminiService = GeminiService();
   String? _transcript;
   bool _isLoading = true;
   bool _isSaving = false;
   bool _hasSaved = false;
+  bool _isImproving = false;
+  bool _isImproved = false;
 
   @override
   void initState() {
@@ -81,6 +85,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
       text: text,
       createdAt: DateTime.now(),
       durationSeconds: widget.duration,
+      mode: widget.mode.name,
     );
     await storageService.saveTranscript(model);
     if (!mounted) return;
@@ -93,6 +98,34 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
         content: Text('Transcript saved'),
         backgroundColor: Color(0xFF534AB7),
         duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _improve() async {
+    if (_transcript == null || _isImproved || _isImproving) {
+      return;
+    }
+
+    setState(() => _isImproving = true);
+    final result = await _geminiService.transform(_transcript!, widget.mode);
+
+    if (!mounted) return;
+
+    if (result != null) {
+      setState(() {
+        _transcript = result;
+        _isImproving = false;
+        _isImproved = true;
+      });
+      return;
+    }
+
+    setState(() => _isImproving = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Could not improve. Try again.'),
+        backgroundColor: Color(0xFF1A1A1A),
       ),
     );
   }
@@ -131,7 +164,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${widget.mode.label} · ${_formattedDuration} · just now',
+                '${widget.mode.emoji} ${widget.mode.label} · ${_formattedDuration} · just now',
                 style: const TextStyle(fontSize: 13, color: Color(0xFF555555)),
               ),
               const SizedBox(height: 16),
@@ -152,12 +185,19 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                           ),
                         )
                       : SingleChildScrollView(
-                          child: Text(
-                            _transcript ?? 'No transcript available.',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFFBBBBBB),
-                              height: 1.6,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 500),
+                            transitionBuilder: (child, animation) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                            child: Text(
+                              _transcript ?? 'No transcript available.',
+                              key: ValueKey(_transcript),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Color(0xFFBBBBBB),
+                                height: 1.6,
+                              ),
                             ),
                           ),
                         ),
@@ -197,6 +237,45 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                           );
                         }
                       },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: (!_isImproving && !_isImproved) ? _improve : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _isImproved
+                                ? const Color(0xFF2A2A2A)
+                                : const Color(0xFF534AB7),
+                          ),
+                        ),
+                        child: Center(
+                          child: _isImproving
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFF534AB7),
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  _isImproved ? '✨ Improved' : '✨ Improve',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: _isImproved
+                                        ? const Color(0xFF555555)
+                                        : const Color(0xFF534AB7),
+                                  ),
+                                ),
+                        ),
+                      ),
                     ),
                   ),
                 ],

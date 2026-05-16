@@ -21,6 +21,23 @@ extension RecordingModeExtension on RecordingMode {
     }
   }
 
+  String get emoji {
+    switch (this) {
+      case RecordingMode.email:
+        return '📧';
+      case RecordingMode.chat:
+        return '💬';
+      case RecordingMode.notes:
+        return '📝';
+      case RecordingMode.code:
+        return '💻';
+      case RecordingMode.essay:
+        return '📄';
+      case RecordingMode.todo:
+        return '✅';
+    }
+  }
+
   IconData get icon {
     switch (this) {
       case RecordingMode.email:
