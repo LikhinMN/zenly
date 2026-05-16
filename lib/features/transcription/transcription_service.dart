@@ -22,11 +22,7 @@ class TranscriptionService {
 
       final response = await _dio.post(
         'https://api.groq.com/openai/v1/audio/transcriptions',
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
         data: formData,
       );
 

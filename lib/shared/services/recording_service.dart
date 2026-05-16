@@ -18,7 +18,10 @@ class RecordingService {
     if (!hasPermission) return null;
 
     final dir = await getTemporaryDirectory();
-    final filePath = p.join(dir.path, 'zenly_${DateTime.now().millisecondsSinceEpoch}.m4a');
+    final filePath = p.join(
+      dir.path,
+      'zenly_${DateTime.now().millisecondsSinceEpoch}.m4a',
+    );
 
     await _recorder.start(
       const RecordConfig(encoder: AudioEncoder.aacLc),

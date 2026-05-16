@@ -4,6 +4,7 @@ import '../transcription/transcription_service.dart';
 import 'package:uuid/uuid.dart';
 import '../../main.dart';
 import '../../shared/models/transcript_model.dart';
+import 'package:share_plus/share_plus.dart';
 
 class TranscriptScreen extends StatefulWidget {
   final String audioPath;
@@ -49,7 +50,11 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
 
   bool get _canSave {
     final text = _transcript?.trim();
-    return !_isLoading && !_isSaving && !_hasSaved && text != null && text.isNotEmpty;
+    return !_isLoading &&
+        !_isSaving &&
+        !_hasSaved &&
+        text != null &&
+        text.isNotEmpty;
   }
 
   Future<void> _saveTranscript() async {
@@ -124,10 +129,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
               const SizedBox(height: 4),
               Text(
                 '${_formattedDuration} · just now',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF555555),
-                ),
+                style: const TextStyle(fontSize: 13, color: Color(0xFF555555)),
               ),
               const SizedBox(height: 16),
 
@@ -142,20 +144,20 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                   ),
                   child: _isLoading
                       ? const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF534AB7),
-                    ),
-                  )
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF534AB7),
+                          ),
+                        )
                       : SingleChildScrollView(
-                    child: Text(
-                      _transcript ?? 'No transcript available.',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFBBBBBB),
-                        height: 1.6,
-                      ),
-                    ),
-                  ),
+                          child: Text(
+                            _transcript ?? 'No transcript available.',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFFBBBBBB),
+                              height: 1.6,
+                            ),
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -184,7 +186,14 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                     child: _ActionButton(
                       icon: Icons.share,
                       label: 'share',
-                      onTap: () {},
+                      onTap: () {
+                        if (_transcript != null) {
+                          Share.share(
+                            _transcript!,
+                            subject: 'Zenly Transcript',
+                          );
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -205,10 +214,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                   child: const Center(
                     child: Text(
                       '+ new recording',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF534AB7),
-                      ),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF534AB7)),
                     ),
                   ),
                 ),
@@ -242,9 +248,7 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isPrimary
-              ? const Color(0xFF534AB7)
-              : const Color(0xFF1A1A1A),
+          color: isPrimary ? const Color(0xFF534AB7) : const Color(0xFF1A1A1A),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isPrimary
@@ -254,9 +258,11 @@ class _ActionButton extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon,
-                size: 18,
-                color: isPrimary ? Colors.white : const Color(0xFF888888)),
+            Icon(
+              icon,
+              size: 18,
+              color: isPrimary ? Colors.white : const Color(0xFF888888),
+            ),
             const SizedBox(height: 4),
             Text(
               label,

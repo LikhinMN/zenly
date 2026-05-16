@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../shared/services/recording_service.dart';
 import '../transcription/transcript_screen.dart';
@@ -13,7 +14,9 @@ class RecordingScreen extends StatefulWidget {
 class _RecordingScreenState extends State<RecordingScreen> {
   final RecordingService _service = RecordingService();
   int _seconds = 0;
+  int _waveTick = 0;
   Timer? _timer;
+  Timer? _waveformTimer;
   bool _isRecording = false;
   String? _filePath;
 
@@ -33,20 +36,24 @@ class _RecordingScreenState extends State<RecordingScreen> {
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
         setState(() => _seconds++);
       });
+      _waveformTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+        if (mounted) {
+          setState(() => _waveTick++);
+        }
+      });
     }
   }
 
   Future<void> _stopRecording() async {
     _timer?.cancel();
+    _waveformTimer?.cancel();
+    setState(() => _isRecording = false);
     final path = await _service.stopRecording();
     if (path != null && mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => TranscriptScreen(
-            audioPath: path,
-            duration: _seconds,
-          ),
+          builder: (_) => TranscriptScreen(audioPath: path, duration: _seconds),
         ),
       );
     }
@@ -61,6 +68,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _waveformTimer?.cancel();
     _service.dispose();
     super.dispose();
   }
@@ -86,19 +94,32 @@ class _RecordingScreenState extends State<RecordingScreen> {
               const SizedBox(height: 20),
 
               // Animated waveform
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [14.0, 26.0, 34.0, 20.0, 30.0, 16.0, 22.0, 10.0]
-                    .map((h) => Container(
-                  width: 3,
-                  height: h,
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7F77DD),
-                    borderRadius: BorderRadius.circular(2),
+              SizedBox(
+                height: 40,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(12, (i) {
+                      final baseHeight = 8.0 + (i % 3) * 6.0;
+                      final animatedHeight =
+                          14 + sin((_waveTick + i) * 0.6) * 16;
+                      final height = _isRecording ? animatedHeight : baseHeight;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 3,
+                        height: height.clamp(6.0, 40.0),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: _isRecording
+                              ? const Color(0xFF7F77DD)
+                              : const Color(0xFF3C3489),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      );
+                    }),
                   ),
-                ))
-                    .toList(),
+                ),
               ),
               const SizedBox(height: 28),
 
@@ -131,10 +152,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
               const SizedBox(height: 16),
               const Text(
                 'recording · tap to stop',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF534AB7),
-                ),
+                style: TextStyle(fontSize: 12, color: Color(0xFF534AB7)),
               ),
             ],
           ),
