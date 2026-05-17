@@ -138,7 +138,9 @@ class _TranscriptScreenState extends ConsumerState<TranscriptScreen> {
   Future<void> _improveTranscript() async {
     final raw = _rawTranscript?.trim() ?? '';
     if (raw.isEmpty) return;
-    await ref.read(transcriptImprovementControllerProvider.notifier).improve(raw);
+    await ref
+        .read(transcriptImprovementControllerProvider.notifier)
+        .improve(raw);
   }
 
   @override
@@ -158,18 +160,13 @@ class _TranscriptScreenState extends ConsumerState<TranscriptScreen> {
           IconButton(
             tooltip: 'Copy raw',
             icon: const Icon(Icons.copy, size: 20),
-            onPressed: () => _copyToClipboard(
-              _rawTranscript,
-              'Transcript copied',
-            ),
+            onPressed: () =>
+                _copyToClipboard(_rawTranscript, 'Transcript copied'),
           ),
           IconButton(
             tooltip: 'Share raw',
             icon: const Icon(Icons.share, size: 20),
-            onPressed: () => _shareText(
-              _rawTranscript,
-              'Zenly Transcript',
-            ),
+            onPressed: () => _shareText(_rawTranscript, 'Zenly Transcript'),
           ),
           const SizedBox(width: 4),
         ],
@@ -207,16 +204,17 @@ class _TranscriptScreenState extends ConsumerState<TranscriptScreen> {
                               ),
                             )
                           : isImproving
-                              ? const TranscriptLoadingCard(
-                                  key: ValueKey('loading'),
-                                )
-                              : EnhanceTranscriptButton(
-                                  key: const ValueKey('cta'),
-                                  onTap: _improveTranscript,
-                                  isLoading: isImproving,
-                                ),
+                          ? const TranscriptLoadingCard(
+                              key: ValueKey('loading'),
+                            )
+                          : EnhanceTranscriptButton(
+                              key: const ValueKey('cta'),
+                              onTap: _improveTranscript,
+                              isLoading: isImproving,
+                            ),
                     ),
-                    if (improvementError != null && improvementResult == null) ...[
+                    if (improvementError != null &&
+                        improvementResult == null) ...[
                       const SizedBox(height: 12),
                       _ErrorBanner(
                         message: improvementError,
@@ -228,7 +226,8 @@ class _TranscriptScreenState extends ConsumerState<TranscriptScreen> {
                       opacity: improvementResult != null ? 0.85 : 1.0,
                       duration: const Duration(milliseconds: 300),
                       child: RawTranscriptCard(
-                        transcript: _rawTranscript ?? 'No transcript available.',
+                        transcript:
+                            _rawTranscript ?? 'No transcript available.',
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -260,20 +259,16 @@ class _TranscriptScreenState extends ConsumerState<TranscriptScreen> {
                           child: ActionPillButton(
                             icon: Icons.share,
                             label: 'share',
-                            onTap: () => _shareText(
-                              _rawTranscript,
-                              'Zenly Transcript',
-                            ),
+                            onTap: () =>
+                                _shareText(_rawTranscript, 'Zenly Transcript'),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     _NewRecordingButton(
-                      onTap: () => Navigator.popUntil(
-                        context,
-                        (route) => route.isFirst,
-                      ),
+                      onTap: () =>
+                          Navigator.popUntil(context, (route) => route.isFirst),
                     ),
                   ],
                 ),
@@ -287,10 +282,7 @@ class _ErrorBanner extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const _ErrorBanner({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorBanner({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -311,10 +303,7 @@ class _ErrorBanner extends StatelessWidget {
               style: const TextStyle(fontSize: 12, color: Color(0xFFFF8A8A)),
             ),
           ),
-          TextButton(
-            onPressed: onRetry,
-            child: const Text('Retry'),
-          ),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );
@@ -344,10 +333,7 @@ class _NewRecordingButton extends StatelessWidget {
           child: const Center(
             child: Text(
               '+ new recording',
-              style: TextStyle(
-                fontSize: 13,
-                color: Color(0xFF8E86E8),
-              ),
+              style: TextStyle(fontSize: 13, color: Color(0xFF8E86E8)),
             ),
           ),
         ),

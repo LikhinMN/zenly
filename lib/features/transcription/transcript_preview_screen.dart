@@ -9,10 +9,7 @@ import 'widgets/transcript_widgets.dart';
 class TranscriptPreviewScreen extends StatelessWidget {
   final TranscriptModel transcript;
 
-  const TranscriptPreviewScreen({
-    super.key,
-    required this.transcript,
-  });
+  const TranscriptPreviewScreen({super.key, required this.transcript});
 
   String _formatTime(DateTime dt) {
     final now = DateTime.now();
@@ -131,9 +128,7 @@ class TranscriptPreviewScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const RecordingScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const RecordingScreen()),
                   );
                 },
               ),
@@ -168,10 +163,7 @@ class _NewRecordingButton extends StatelessWidget {
           child: const Center(
             child: Text(
               '+ new recording',
-              style: TextStyle(
-                fontSize: 13,
-                color: Color(0xFF8E86E8),
-              ),
+              style: TextStyle(fontSize: 13, color: Color(0xFF8E86E8)),
             ),
           ),
         ),

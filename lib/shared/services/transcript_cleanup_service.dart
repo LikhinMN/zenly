@@ -6,7 +6,8 @@ import '../models/transcript_improvement_result.dart';
 
 class TranscriptCleanupService {
   static const String _model = 'gemini-2.5-flash';
-  static const String _systemPrompt = '''You are a transcript refinement engine for spoken language.
+  static const String _systemPrompt =
+      '''You are a transcript refinement engine for spoken language.
 Your task is to reconstruct natural, readable conversational text while preserving meaning exactly.
 
 OUTPUT RULES (MANDATORY):
@@ -79,23 +80,23 @@ EDGE CASES:
       data: {
         'systemInstruction': {
           'parts': [
-            {'text': _systemPrompt}
-          ]
+            {'text': _systemPrompt},
+          ],
         },
         'contents': [
           {
             'role': 'user',
             'parts': [
-              {'text': trimmed}
-            ]
-          }
+              {'text': trimmed},
+            ],
+          },
         ],
         'generationConfig': {
           'temperature': 0.2,
           'topP': 0.9,
           'maxOutputTokens': 1024,
-          'responseMimeType': 'application/json'
-        }
+          'responseMimeType': 'application/json',
+        },
       },
     );
 
@@ -104,7 +105,9 @@ EDGE CASES:
     final first = candidates?.isNotEmpty == true ? candidates!.first : null;
     final content = first?['content'] as Map<String, dynamic>?;
     final parts = content?['parts'] as List<dynamic>?;
-    final text = parts?.isNotEmpty == true ? parts!.first['text'] as String? : null;
+    final text = parts?.isNotEmpty == true
+        ? parts!.first['text'] as String?
+        : null;
 
     final cleaned = text?.trim();
     if (cleaned == null || cleaned.isEmpty) {

@@ -1,8 +1,4 @@
-enum TranscriptConfidence {
-  low,
-  medium,
-  high,
-}
+enum TranscriptConfidence { low, medium, high }
 
 class TranscriptImprovementResult {
   final String improvedTranscript;
@@ -19,9 +15,9 @@ class TranscriptImprovementResult {
     final improved = json['improved_transcript']?.toString().trim() ?? '';
     final changes = json['changes_made'] is List
         ? (json['changes_made'] as List)
-            .map((item) => item.toString().trim())
-            .where((item) => item.isNotEmpty)
-            .toList()
+              .map((item) => item.toString().trim())
+              .where((item) => item.isNotEmpty)
+              .toList()
         : <String>[];
     final confidenceRaw = json['confidence']?.toString().toLowerCase() ?? 'low';
     final confidence = TranscriptConfidence.values.firstWhere(
@@ -36,4 +32,3 @@ class TranscriptImprovementResult {
     );
   }
 }
-

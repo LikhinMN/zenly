@@ -78,7 +78,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
         try {
           await File(path).delete();
         } catch (_) {}
-        debugPrint('SpeechDetector: chunk skipped (${_speechDetector.debugStatus})');
+        debugPrint(
+          'SpeechDetector: chunk skipped (${_speechDetector.debugStatus})',
+        );
       }
     }
     _speechDetector.resetChunk();
@@ -119,7 +121,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
         try {
           await File(path).delete();
         } catch (_) {}
-        debugPrint('SpeechDetector: final chunk skipped (${_speechDetector.debugStatus})');
+        debugPrint(
+          'SpeechDetector: final chunk skipped (${_speechDetector.debugStatus})',
+        );
       }
     }
     _speechDetector.stop();

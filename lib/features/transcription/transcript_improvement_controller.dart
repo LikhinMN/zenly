@@ -14,9 +14,9 @@ class TranscriptImprovementState {
   });
 
   const TranscriptImprovementState.idle()
-      : isLoading = false,
-        result = null,
-        errorMessage = null;
+    : isLoading = false,
+      result = null,
+      errorMessage = null;
 
   TranscriptImprovementState copyWith({
     bool? isLoading,
@@ -36,8 +36,8 @@ class TranscriptImprovementController
   final TranscriptCleanupService _service;
 
   TranscriptImprovementController({TranscriptCleanupService? service})
-      : _service = service ?? TranscriptCleanupService(),
-        super(const TranscriptImprovementState.idle());
+    : _service = service ?? TranscriptCleanupService(),
+      super(const TranscriptImprovementState.idle());
 
   Future<void> improve(String rawText) async {
     if (state.isLoading) return;
@@ -66,8 +66,8 @@ class TranscriptImprovementController
   }
 }
 
-final transcriptImprovementControllerProvider = StateNotifierProvider<
-    TranscriptImprovementController, TranscriptImprovementState>(
-  (ref) => TranscriptImprovementController(),
-);
-
+final transcriptImprovementControllerProvider =
+    StateNotifierProvider<
+      TranscriptImprovementController,
+      TranscriptImprovementState
+    >((ref) => TranscriptImprovementController());

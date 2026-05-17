@@ -38,11 +38,14 @@ class SpeechDetectorService {
     _subscription?.cancel();
     _subscription = recordingService
         .onAmplitudeChanged(Duration(milliseconds: config.sampleIntervalMs))
-        .listen(_onSample, onError: (e) {
-      if (config.enableLogging) {
-        debugPrint('SpeechDetector: amplitude stream error: $e');
-      }
-    });
+        .listen(
+          _onSample,
+          onError: (e) {
+            if (config.enableLogging) {
+              debugPrint('SpeechDetector: amplitude stream error: $e');
+            }
+          },
+        );
   }
 
   void stop() {
@@ -85,11 +88,12 @@ class SpeechDetectorService {
     }
 
     if (config.enableLogging && _samples % config.logEverySamples == 0) {
-      debugPrint('SpeechDetector: db=${currentDb.toStringAsFixed(1)} '
-          'peak=${_peakDb.toStringAsFixed(1)} '
-          'speechMs=$_totalSpeechMs '
-          'segment=$_hasSpeechSegment');
+      debugPrint(
+        'SpeechDetector: db=${currentDb.toStringAsFixed(1)} '
+        'peak=${_peakDb.toStringAsFixed(1)} '
+        'speechMs=$_totalSpeechMs '
+        'segment=$_hasSpeechSegment',
+      );
     }
   }
 }
-
