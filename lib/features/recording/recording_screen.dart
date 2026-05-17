@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../shared/services/recording_service.dart';
+import '../../shared/services/speech_detector_service.dart';
 import '../transcription/transcript_screen.dart';
 import '../transcription/transcription_service.dart';
 
@@ -16,6 +17,16 @@ class RecordingScreen extends StatefulWidget {
 class _RecordingScreenState extends State<RecordingScreen> {
   final RecordingService _service = RecordingService();
   final TranscriptionService _transcriptionService = TranscriptionService();
+  final SpeechDetectorService _speechDetector = SpeechDetectorService(
+    config: const SpeechDetectorConfig(
+      sampleIntervalMs: 250,
+      speechDbThreshold: -50,
+      minSpeechMs: 1000,
+      minConsecutiveSpeechMs: 600,
+      minPeakDb: -45,
+      enableLogging: true,
+    ),
+  );
   int _seconds = 0;
   int _waveTick = 0;
   Timer? _timer;
@@ -38,6 +49,8 @@ class _RecordingScreenState extends State<RecordingScreen> {
     if (!hasPermission) return;
 
     await _service.startRecording(skipPermissionCheck: true);
+    _speechDetector.resetChunk();
+    _speechDetector.start(_service);
     setState(() {
       _isRecording = true;
     });
@@ -59,8 +72,16 @@ class _RecordingScreenState extends State<RecordingScreen> {
     _isRotatingChunk = true;
     final path = await _service.stopRecording();
     if (path != null) {
-      _enqueueTranscription(path);
+      if (_speechDetector.isChunkValid) {
+        _enqueueTranscription(path);
+      } else {
+        try {
+          await File(path).delete();
+        } catch (_) {}
+        debugPrint('SpeechDetector: chunk skipped (${_speechDetector.debugStatus})');
+      }
     }
+    _speechDetector.resetChunk();
     if (_isRecording && !_isStopping) {
       await _service.startRecording(skipPermissionCheck: true);
     }
@@ -92,8 +113,17 @@ class _RecordingScreenState extends State<RecordingScreen> {
     setState(() => _isRecording = false);
     final path = await _service.stopRecording();
     if (path != null) {
-      _enqueueTranscription(path);
+      if (_speechDetector.isChunkValid) {
+        _enqueueTranscription(path);
+      } else {
+        try {
+          await File(path).delete();
+        } catch (_) {}
+        debugPrint('SpeechDetector: final chunk skipped (${_speechDetector.debugStatus})');
+      }
     }
+    _speechDetector.stop();
+    _speechDetector.resetChunk();
     await _transcriptionQueue;
     if (mounted) {
       Navigator.pushReplacement(
@@ -120,6 +150,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
     _timer?.cancel();
     _waveformTimer?.cancel();
     _chunkTimer?.cancel();
+    _speechDetector.stop();
     _service.dispose();
     super.dispose();
   }

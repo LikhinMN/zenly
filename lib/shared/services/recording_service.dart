@@ -43,6 +43,11 @@ class RecordingService {
     return await _recorder.isRecording();
   }
 
+  // Amplitude stream for speech detection
+  Stream<Amplitude> onAmplitudeChanged(Duration interval) {
+    return _recorder.onAmplitudeChanged(interval);
+  }
+
   // Clean up
   void dispose() {
     _recorder.dispose();
