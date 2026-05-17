@@ -13,9 +13,11 @@ class RecordingService {
   }
 
   // Start recording — saves to app temp directory
-  Future<String?> startRecording() async {
-    final hasPermission = await requestPermission();
-    if (!hasPermission) return null;
+  Future<String?> startRecording({bool skipPermissionCheck = false}) async {
+    if (!skipPermissionCheck) {
+      final hasPermission = await requestPermission();
+      if (!hasPermission) return null;
+    }
 
     final dir = await getTemporaryDirectory();
     final filePath = p.join(

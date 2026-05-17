@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../shared/services/recording_service.dart';
 import '../transcription/transcript_screen.dart';
+import '../transcription/transcription_service.dart';
 
 class RecordingScreen extends StatefulWidget {
   const RecordingScreen({super.key});
@@ -13,12 +15,17 @@ class RecordingScreen extends StatefulWidget {
 
 class _RecordingScreenState extends State<RecordingScreen> {
   final RecordingService _service = RecordingService();
+  final TranscriptionService _transcriptionService = TranscriptionService();
   int _seconds = 0;
   int _waveTick = 0;
   Timer? _timer;
   Timer? _waveformTimer;
+  Timer? _chunkTimer;
   bool _isRecording = false;
-  String? _filePath;
+  bool _isRotatingChunk = false;
+  bool _isStopping = false;
+  String _liveTranscript = '';
+  Future<void> _transcriptionQueue = Future.value();
 
   @override
   void initState() {
@@ -27,33 +34,76 @@ class _RecordingScreenState extends State<RecordingScreen> {
   }
 
   Future<void> _startRecording() async {
-    final path = await _service.startRecording();
+    final hasPermission = await _service.requestPermission();
+    if (!hasPermission) return;
+
+    await _service.startRecording(skipPermissionCheck: true);
+    setState(() {
+      _isRecording = true;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() => _seconds++);
+    });
+    _waveformTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      if (mounted) {
+        setState(() => _waveTick++);
+      }
+    });
+    _chunkTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _rotateChunk();
+    });
+  }
+
+  Future<void> _rotateChunk() async {
+    if (!_isRecording || _isRotatingChunk || _isStopping) return;
+    _isRotatingChunk = true;
+    final path = await _service.stopRecording();
     if (path != null) {
-      setState(() {
-        _isRecording = true;
-        _filePath = path;
-      });
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        setState(() => _seconds++);
-      });
-      _waveformTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-        if (mounted) {
-          setState(() => _waveTick++);
-        }
-      });
+      _enqueueTranscription(path);
     }
+    if (_isRecording && !_isStopping) {
+      await _service.startRecording(skipPermissionCheck: true);
+    }
+    _isRotatingChunk = false;
+  }
+
+  void _enqueueTranscription(String path) {
+    _transcriptionQueue = _transcriptionQueue.then((_) async {
+      final text = await _transcriptionService.transcribe(path);
+      try {
+        await File(path).delete();
+      } catch (_) {}
+      if (!mounted || text == null) return;
+      final trimmed = text.trim();
+      if (trimmed.isEmpty || trimmed.startsWith('Error:')) return;
+      setState(() {
+        _liveTranscript = _liveTranscript.isEmpty
+            ? trimmed
+            : '$_liveTranscript $trimmed';
+      });
+    });
   }
 
   Future<void> _stopRecording() async {
+    _isStopping = true;
     _timer?.cancel();
     _waveformTimer?.cancel();
+    _chunkTimer?.cancel();
     setState(() => _isRecording = false);
     final path = await _service.stopRecording();
-    if (path != null && mounted) {
+    if (path != null) {
+      _enqueueTranscription(path);
+    }
+    await _transcriptionQueue;
+    if (mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => TranscriptScreen(audioPath: path, duration: _seconds),
+          builder: (_) => TranscriptScreen(
+            audioPath: null,
+            duration: _seconds,
+            initialTranscript: _liveTranscript.trim(),
+          ),
         ),
       );
     }
@@ -69,6 +119,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
   void dispose() {
     _timer?.cancel();
     _waveformTimer?.cancel();
+    _chunkTimer?.cancel();
     _service.dispose();
     super.dispose();
   }
@@ -154,6 +205,35 @@ class _RecordingScreenState extends State<RecordingScreen> {
                 'recording · tap to stop',
                 style: TextStyle(fontSize: 12, color: Color(0xFF534AB7)),
               ),
+              const SizedBox(height: 20),
+
+              // Live transcript
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A1A),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF2A2A2A)),
+                ),
+                child: SizedBox(
+                  height: 96,
+                  child: SingleChildScrollView(
+                    reverse: true,
+                    child: Text(
+                      _liveTranscript.isEmpty
+                          ? 'Listening...'
+                          : _liveTranscript,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFBBBBBB),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

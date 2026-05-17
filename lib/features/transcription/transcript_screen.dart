@@ -7,13 +7,15 @@ import '../../shared/models/transcript_model.dart';
 import 'package:share_plus/share_plus.dart';
 
 class TranscriptScreen extends StatefulWidget {
-  final String audioPath;
+  final String? audioPath;
   final int duration;
+  final String? initialTranscript;
 
   const TranscriptScreen({
     super.key,
     required this.audioPath,
     required this.duration,
+    this.initialTranscript,
   });
 
   @override
@@ -30,11 +32,19 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
   @override
   void initState() {
     super.initState();
-    _transcribe();
+    if (widget.initialTranscript != null) {
+      _transcript = widget.initialTranscript;
+      _isLoading = false;
+    } else if (widget.audioPath != null) {
+      _transcribe();
+    } else {
+      _transcript = 'No audio available for transcription.';
+      _isLoading = false;
+    }
   }
 
   Future<void> _transcribe() async {
-    final result = await _service.transcribe(widget.audioPath);
+    final result = await _service.transcribe(widget.audioPath!);
     setState(() {
       _transcript = result;
       _isLoading = false;
