@@ -16,10 +16,14 @@ class TranscriptModel extends HiveObject {
   @HiveField(3)
   final int durationSeconds;
 
+  @HiveField(4)
+  final String? improvedText;
+
   TranscriptModel({
     required this.id,
     required this.text,
     required this.createdAt,
     required this.durationSeconds,
+    this.improvedText,
   });
 }

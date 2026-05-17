@@ -21,13 +21,14 @@ class TranscriptModelAdapter extends TypeAdapter<TranscriptModel> {
       text: fields[1] as String,
       createdAt: fields[2] as DateTime,
       durationSeconds: fields[3] as int,
+      improvedText: fields[4] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TranscriptModel obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class TranscriptModelAdapter extends TypeAdapter<TranscriptModel> {
       ..writeByte(2)
       ..write(obj.createdAt)
       ..writeByte(3)
-      ..write(obj.durationSeconds);
+      ..write(obj.durationSeconds)
+      ..writeByte(4)
+      ..write(obj.improvedText);
   }
 
   @override

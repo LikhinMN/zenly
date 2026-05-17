@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../shared/models/transcript_improvement_result.dart';
 import '../../shared/models/transcript_model.dart';
 import '../recording/recording_screen.dart';
+import 'widgets/transcript_widgets.dart';
 
 class TranscriptPreviewScreen extends StatelessWidget {
   final TranscriptModel transcript;
@@ -57,14 +59,34 @@ class TranscriptPreviewScreen extends StatelessWidget {
     Share.share(text, subject: 'Transcript');
   }
 
+  void _copyImproved(BuildContext context) {
+    final text = transcript.improvedText?.trim();
+    if (text == null || text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Refined transcript copied'),
+        backgroundColor: Color(0xFF534AB7),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _shareImproved(BuildContext context) {
+    final text = transcript.improvedText?.trim();
+    if (text == null || text.isEmpty) return;
+    Share.share(text, subject: 'Zenly Refined Transcript');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasImproved = transcript.improvedText?.trim().isNotEmpty == true;
     return Scaffold(
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: const Color(0xFF0F0F10),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: const Color(0xFF0F0F10),
         elevation: 0,
-        title: const Text('Transcript'),
+        title: const SizedBox.shrink(),
         actions: [
           IconButton(
             icon: const Icon(Icons.copy, size: 20),
@@ -80,41 +102,32 @@ class TranscriptPreviewScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${_formatTime(transcript.createdAt)} · ${_formatDuration(transcript.durationSeconds)}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF555555),
-                ),
+              TranscriptSectionHeader(
+                title: 'Transcript',
+                subtitle:
+                    '${_formatDuration(transcript.durationSeconds)} · ${_formatTime(transcript.createdAt)}',
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
-                    borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 20),
+              if (hasImproved) ...[
+                ImprovedTranscriptCard(
+                  result: TranscriptImprovementResult(
+                    improvedTranscript: transcript.improvedText!.trim(),
+                    changesMade: const [],
+                    confidence: TranscriptConfidence.medium,
                   ),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      transcript.text,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFBBBBBB),
-                        height: 1.6,
-                      ),
-                    ),
-                  ),
+                  onCopy: () => _copyImproved(context),
+                  onShare: () => _shareImproved(context),
                 ),
-              ),
-              const SizedBox(height: 16),
-              GestureDetector(
+                const SizedBox(height: 20),
+              ],
+              RawTranscriptCard(transcript: transcript.text),
+              const SizedBox(height: 20),
+              _NewRecordingButton(
                 onTap: () {
                   Navigator.push(
                     context,
@@ -123,27 +136,43 @@ class TranscriptPreviewScreen extends StatelessWidget {
                     ),
                   );
                 },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF2A2A2A)),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      '+ new recording',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF534AB7),
-                      ),
-                    ),
-                  ),
-                ),
               ),
-              const SizedBox(height: 24),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NewRecordingButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _NewRecordingButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF141414),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF2A2A2A)),
+          ),
+          child: const Center(
+            child: Text(
+              '+ new recording',
+              style: TextStyle(
+                fontSize: 13,
+                color: Color(0xFF8E86E8),
+              ),
+            ),
           ),
         ),
       ),

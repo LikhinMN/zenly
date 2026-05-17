@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/recording/home_screen.dart';
 import 'shared/services/storage_service.dart';
 
@@ -11,7 +12,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   await storageService.init();
-  runApp(const ZenlyApp());
+  runApp(const ProviderScope(child: ZenlyApp()));
 }
 
 class ZenlyApp extends StatelessWidget {
