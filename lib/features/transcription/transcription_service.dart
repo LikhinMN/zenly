@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TranscriptionService {
@@ -26,7 +26,7 @@ class TranscriptionService {
         data: formData,
       );
 
-      print('Groq Response: ${response.data}');
+      debugPrint('Groq Response: ${response.data}');
 
       if (response.statusCode == 200) {
         return response.data['text'] as String?;
@@ -35,9 +35,9 @@ class TranscriptionService {
       }
     } catch (e) {
       if (e is DioException && e.response != null) {
-        print('Groq Error body: ${e.response?.data}');
+        debugPrint('Groq Error body: ${e.response?.data}');
       }
-      print('Transcription error: $e');
+      debugPrint('Transcription error: $e');
       return 'Error: $e';
     }
   }
