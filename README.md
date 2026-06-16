@@ -1,40 +1,44 @@
 # Zenly
 
-A minimal voice-to-text app built with Flutter. Record speech, stream it to Groq Whisper for transcription, optionally refine it with Gemini, and save/share transcripts locally.
+A calm, minimal voice-to-text application and system-wide Android keyboard. Built with Flutter for the main UI and native Kotlin for the Android Input Method Service (IME), Zenly allows you to effortlessly capture thoughts via voice and transcribe them locally or directly into any app using Groq Whisper.
 
 ## Features
-- One-tap recording with live waveform and timer.
-- Chunked speech capture with voice activity detection to skip silence.
-- Cloud transcription using Groq Whisper (`whisper-large-v3`).
-- Optional transcript cleanup/refinement using Gemini.
-- Local transcript history stored in Hive with delete/share/copy.
+
+### 🎙️ Main App (Flutter)
+- **Calm Focus UI**: A minimal, distraction-free interface built around a single accent color.
+- **Reliable Recording**: One-tap recording with dynamic waveform visuals.
+- **Accurate Transcription**: Powered by Groq's `whisper-large-v3` model.
+- **History Management**: Locally stored transcripts using Hive with swipe-to-delete.
+- **Onboarding & Settings**: Smooth first-launch experience with easy API key management and deep-links to Android keyboard settings.
+
+### ⌨️ Zenly Voice Keyboard (Native Android Kotlin)
+- **Type Anywhere**: A system-wide Android custom keyboard that allows you to dictate text into *any* app's text field.
+- **Voice-First Design**: A prominent mic button and live audio waveform integrated directly into the keyboard.
+- **Manual Key Row**: Includes essential manual keys (Space, Backspace, Enter, and Globe/Switch Keyboard) for quick edits without switching back to a standard QWERTY keyboard.
+- **Fast & Lightweight**: Built natively in Kotlin to avoid the cold-start and memory overhead of embedding a Flutter engine in an IME.
+- **Shared State**: Securely syncs your API keys from the Flutter app via `EncryptedSharedPreferences`.
 
 ## How It Works
-1. Audio is recorded in 5-second chunks.
-2. A speech detector filters out low-signal chunks.
-3. Valid chunks are sent to Groq for transcription and merged live.
-4. On stop, the transcript is shown, can be refined, saved, and shared.
+1. Audio is recorded and voice activity detection (VAD) monitors silence.
+2. Once recording stops, the audio file is sent directly to Groq for near-instant transcription.
+3. In the main app, the transcript is saved to history and can be refined or shared.
+4. In the keyboard, the transcribed text is automatically injected into the active text field using Android's `InputConnection`.
 
 ## Tech Stack
-- Flutter + Dart
-- State: `flutter_riverpod`
-- Storage: `hive` / `hive_flutter`
-- Audio: `record`
-- HTTP: `dio`
-- Sharing: `share_plus`
-- Env config: `flutter_dotenv`
-
-## Project Structure
-- `lib/main.dart`: App entry point and theme.
-- `lib/features/recording/`: Recording UI and flow.
-- `lib/features/transcription/`: Transcript UI + improvement logic.
-- `lib/shared/services/`: Recording, speech detection, storage, API clients.
-- `assets/`: App icons and splash assets.
+- **Main App**: Flutter + Dart
+- **Native Keyboard**: Kotlin + Android SDK (`InputMethodService`)
+- **State Management**: `flutter_riverpod`
+- **Storage**: `hive` / `hive_flutter` + Android `EncryptedSharedPreferences`
+- **Audio Capture**: `record` (Flutter) + `AudioRecord` (Kotlin)
+- **Networking**: `dio` (Flutter) + `OkHttp` (Kotlin)
+- **Environment**: `flutter_dotenv`
 
 ## Setup
+
 ### Prerequisites
 - Flutter SDK (Dart 3.11+)
-- Android Studio or a connected device/emulator
+- Android Studio or a connected Android device/emulator
+- **Note**: Zenly is currently Android-only. Support for iOS, Web, and Desktop has been removed to focus on the native Android keyboard experience.
 
 ### Environment Variables
 Create a `.env` file in the project root:
@@ -43,8 +47,6 @@ Create a `.env` file in the project root:
 GROQ_TOKEN=your_groq_api_key
 GEMINI_API_KEY=your_gemini_api_key
 ```
-
-Both keys are required for transcription + refinement. If you only need transcription, you can leave `GEMINI_API_KEY` empty and skip the refine action.
 
 ### Install Dependencies
 ```sh
@@ -56,25 +58,16 @@ flutter pub get
 flutter run
 ```
 
-## Permissions
-- Android: `RECORD_AUDIO` and `WRITE_EXTERNAL_STORAGE` are declared in `android/app/src/main/AndroidManifest.xml`.
-- iOS: add `NSMicrophoneUsageDescription` in `ios/Runner/Info.plist` if you plan to run on iOS.
-
-## Usage
-- Tap the mic button to start recording.
-- Speak; the live transcript updates as chunks complete.
-- Tap stop to view the transcript, optionally refine it, then save/share.
-- Saved transcripts appear on the home list and can be deleted by swiping.
-
-## Troubleshooting
-- If transcription fails, confirm the `.env` keys are present and valid.
-- If the mic permission dialog does not appear, check OS settings.
-- If transcripts are empty, try speaking louder or longer to pass the speech detector thresholds.
+## Enabling the Keyboard
+1. Launch the Zenly app and complete the onboarding flow to grant Microphone permissions and sync your API keys.
+2. Tap "Open Keyboard Settings" in the app (or go to Android Settings > System > Languages & input > On-screen keyboard).
+3. Toggle on **Zenly Voice Keyboard**.
+4. Open any app with a text field, switch to the Zenly keyboard using the system globe icon, and tap the mic to start dictating!
 
 ## Development Notes
-- Transcripts are stored locally in Hive (`transcripts` box).
-- Chunk duration is set to 5s in `RecordingScreen`.
-- Speech detection thresholds are configurable in `SpeechDetectorConfig`.
+- **App/IME Bridge**: The Flutter app syncs the Groq token to the native IME via a `MethodChannel` inside `MainActivity.kt`.
+- **UI Architecture**: The Flutter app uses `MainScaffold` for bottom-tab navigation and `AppTheme` for its central design language.
+- **Native IME Code**: All native keyboard logic, including VAD and OkHttp requests, is located in `android/app/src/main/kotlin/com/likhinmn/zenly/ime/`.
 
 ## License
 This project is currently private and not configured for publishing.
