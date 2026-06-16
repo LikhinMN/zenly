@@ -27,22 +27,14 @@ class _RecordingScreenState extends State<RecordingScreen> {
       enableLogging: true,
     ),
   );
+  
   int _seconds = 0;
   int _waveTick = 0;
   Timer? _timer;
   Timer? _waveformTimer;
-  Timer? _chunkTimer;
   bool _isRecording = false;
-  bool _isRotatingChunk = false;
+  bool _isProcessing = false;
   bool _isStopping = false;
-  String _liveTranscript = '';
-  Future<void> _transcriptionQueue = Future.value();
-
-  @override
-  void initState() {
-    super.initState();
-    _startRecording();
-  }
 
   Future<void> _startRecording() async {
     final hasPermission = await _service.requestPermission();
@@ -51,99 +43,80 @@ class _RecordingScreenState extends State<RecordingScreen> {
     await _service.startRecording(skipPermissionCheck: true);
     _speechDetector.resetChunk();
     _speechDetector.start(_service);
+    
     setState(() {
       _isRecording = true;
+      _isProcessing = false;
+      _seconds = 0;
     });
+    
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() => _seconds++);
+      if (mounted) setState(() => _seconds++);
     });
-    _waveformTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      if (mounted) {
-        setState(() => _waveTick++);
-      }
-    });
-    _chunkTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _rotateChunk();
-    });
-  }
-
-  Future<void> _rotateChunk() async {
-    if (!_isRecording || _isRotatingChunk || _isStopping) return;
-    _isRotatingChunk = true;
-    final path = await _service.stopRecording();
-    if (path != null) {
-      if (_speechDetector.isChunkValid) {
-        _enqueueTranscription(path);
-      } else {
-        try {
-          await File(path).delete();
-        } catch (_) {}
-        debugPrint(
-          'SpeechDetector: chunk skipped (${_speechDetector.debugStatus})',
-        );
-      }
-    }
-    _speechDetector.resetChunk();
-    if (_isRecording && !_isStopping) {
-      await _service.startRecording(skipPermissionCheck: true);
-    }
-    _isRotatingChunk = false;
-  }
-
-  void _enqueueTranscription(String path) {
-    _transcriptionQueue = _transcriptionQueue.then((_) async {
-      final text = await _transcriptionService.transcribe(path);
-      try {
-        await File(path).delete();
-      } catch (_) {}
-      if (!mounted || text == null) return;
-      final trimmed = text.trim();
-      if (trimmed.isEmpty || trimmed.startsWith('Error:')) return;
-      setState(() {
-        _liveTranscript = _liveTranscript.isEmpty
-            ? trimmed
-            : '$_liveTranscript $trimmed';
-      });
+    _waveformTimer = Timer.periodic(const Duration(milliseconds: 150), (_) {
+      if (mounted) setState(() => _waveTick++);
     });
   }
 
   Future<void> _stopRecording() async {
+    if (_isStopping) return;
     _isStopping = true;
     _timer?.cancel();
     _waveformTimer?.cancel();
-    _chunkTimer?.cancel();
-    setState(() => _isRecording = false);
+    
+    setState(() {
+      _isRecording = false;
+      _isProcessing = true;
+    });
+    
     final path = await _service.stopRecording();
-    if (path != null) {
-      if (_speechDetector.isChunkValid) {
-        _enqueueTranscription(path);
+    _speechDetector.stop();
+    
+    String finalTranscript = '';
+    
+    if (path != null && _speechDetector.isChunkValid) {
+      final text = await _transcriptionService.transcribe(path);
+      if (text != null && !text.startsWith('Error:')) {
+        finalTranscript = text.trim();
+      }
+      try { await File(path).delete(); } catch (_) {}
+    } else if (path != null) {
+      try { await File(path).delete(); } catch (_) {}
+    }
+    
+    _speechDetector.resetChunk();
+    
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _seconds = 0;
+      });
+      if (finalTranscript.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TranscriptScreen(
+              audioPath: null,
+              duration: _seconds,
+              initialTranscript: finalTranscript,
+            ),
+          ),
+        );
       } else {
-        try {
-          await File(path).delete();
-        } catch (_) {}
-        debugPrint(
-          'SpeechDetector: final chunk skipped (${_speechDetector.debugStatus})',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No speech detected or transcription failed.'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         );
       }
-    }
-    _speechDetector.stop();
-    _speechDetector.resetChunk();
-    await _transcriptionQueue;
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => TranscriptScreen(
-            audioPath: null,
-            duration: _seconds,
-            initialTranscript: _liveTranscript.trim(),
-          ),
-        ),
-      );
+      _isStopping = false;
     }
   }
 
   String get _formattedTime {
+    if (_seconds == 0) return '00:00';
     final m = (_seconds ~/ 60).toString().padLeft(2, '0');
     final s = (_seconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
@@ -153,7 +126,6 @@ class _RecordingScreenState extends State<RecordingScreen> {
   void dispose() {
     _timer?.cancel();
     _waveformTimer?.cancel();
-    _chunkTimer?.cancel();
     _speechDetector.stop();
     _service.dispose();
     super.dispose();
@@ -161,116 +133,115 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF111111),
       body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Timer
-              Text(
-                _formattedTime,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF534AB7),
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Animated waveform
-              SizedBox(
-                height: 40,
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(12, (i) {
-                      final baseHeight = 8.0 + (i % 3) * 6.0;
-                      final animatedHeight =
-                          14 + sin((_waveTick + i) * 0.6) * 16;
-                      final height = _isRecording ? animatedHeight : baseHeight;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 3,
-                        height: height.clamp(6.0, 40.0),
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        decoration: BoxDecoration(
-                          color: _isRecording
-                              ? const Color(0xFF7F77DD)
-                              : const Color(0xFF3C3489),
-                          borderRadius: BorderRadius.circular(2),
+        child: Column(
+          children: [
+            const SizedBox(height: 64),
+            
+            // Central Mic Button Area
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Waveform (behind/around the mic)
+                        if (_isRecording)
+                          SizedBox(
+                            width: 240,
+                            height: 240,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: List.generate(24, (i) {
+                                final height = 40 + sin((_waveTick + i) * 0.5) * 60;
+                                return AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  width: 4,
+                                  height: height.clamp(10.0, 140.0),
+                                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withAlpha(51),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ),
+                        
+                        if (_isProcessing)
+                          SizedBox(
+                            width: 120,
+                            height: 120,
+                            child: CircularProgressIndicator(
+                              color: theme.colorScheme.primary,
+                              strokeWidth: 4,
+                            ),
+                          )
+                        else
+                          // Mic Button
+                          GestureDetector(
+                            onTap: _isRecording ? _stopRecording : _startRecording,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              width: _isRecording ? 100 : 120,
+                              height: _isRecording ? 100 : 120,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _isRecording ? theme.colorScheme.surface : theme.colorScheme.primary,
+                                border: Border.all(
+                                  color: theme.colorScheme.primary,
+                                  width: _isRecording ? 4 : 0,
+                                ),
+                                boxShadow: [
+                                  if (!_isRecording)
+                                    BoxShadow(
+                                      color: theme.colorScheme.primary.withAlpha(77),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
+                                    )
+                                ],
+                              ),
+                              child: Icon(
+                                _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
+                                size: 48,
+                                color: _isRecording ? theme.colorScheme.primary : Colors.white,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 48),
+                    
+                    // Status Text
+                    Text(
+                      _isProcessing 
+                        ? 'Transcribing...' 
+                        : (_isRecording ? 'Listening...' : 'Tap to start speaking'),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    if (_isRecording || _isProcessing) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _formattedTime,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.primary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
-                      );
-                    }),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // Stop button
-              GestureDetector(
-                onTap: _stopRecording,
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF1D1520),
-                    border: Border.all(
-                      color: const Color(0xFF534AB7),
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF534AB7),
-                        borderRadius: BorderRadius.circular(4),
                       ),
-                    ),
-                  ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'recording · tap to stop',
-                style: TextStyle(fontSize: 12, color: Color(0xFF534AB7)),
-              ),
-              const SizedBox(height: 20),
-
-              // Live transcript
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF2A2A2A)),
-                ),
-                child: SizedBox(
-                  height: 96,
-                  child: SingleChildScrollView(
-                    reverse: true,
-                    child: Text(
-                      _liveTranscript.isEmpty
-                          ? 'Listening...'
-                          : _liveTranscript,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFFBBBBBB),
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
